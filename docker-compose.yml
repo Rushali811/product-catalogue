@@ -1,0 +1,37 @@
+# One command for all local infra:
+#   docker compose up
+# Brings up:
+#   - mailhog  : local SMTP (1025) + web UI (http://localhost:8025) to view enquiries
+#   - api      : the Fastify backend on http://localhost:3001
+# The frontend runs on the host via `npm run dev --workspace @product-catalogue/web`
+# so hot-reload "just works" without a dev-server-in-Docker setup.
+services:
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: product-catalogue-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+    container_name: product-catalogue-api
+    environment:
+      PORT: 3001
+      HOST: 0.0.0.0
+      CORS_ORIGIN: http://localhost:5173
+      FAKE_STORE_API_URL: https://fakestoreapi.com
+      PRODUCT_CACHE_TTL_MS: 60000
+      FEATURED_PRODUCT_IDS: "1,2,4,5,8"
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      EMAIL_FROM: "Product Catalogue <no-reply@example.com>"
+      SALES_INBOX: sales@example.com
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mailhog
+    restart: unless-stopped
